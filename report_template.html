@@ -1,0 +1,1215 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>性能测试报告 - {{title}}</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-crosshair@1.2.0/dist/chartjs-plugin-crosshair.min.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0b0c0e;
+            --bg-secondary: #141619;
+            --bg-card: #1a1d21;
+            --bg-hover: #23272e;
+            --text-primary: #d1d5db;
+            --text-secondary: #9ca3af;
+            --text-muted: #6b7280;
+            --border-color: #2a2f3a;
+            --accent-blue: #3b82f6;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --accent-yellow: #f59e0b;
+            --accent-purple: #8b5cf6;
+            --accent-cyan: #06b6d4;
+            --accent-pink: #ec4899;
+            --accent-orange: #f97316;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-card) 100%);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px 32px;
+            margin-bottom: 24px;
+        }
+
+        header h1 {
+            font-size: 26px;
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        header .subtitle {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-top: 8px;
+            padding-left: 38px;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 600;
+            border: 1px solid;
+        }
+
+        .status-ok {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--accent-green);
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+
+        .status-warning {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--accent-yellow);
+            border-color: rgba(245, 158, 11, 0.3);
+        }
+
+        .status-error {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--accent-red);
+            border-color: rgba(239, 68, 68, 0.3);
+        }
+
+        /* 核心指标网格 */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .metric-card {
+            background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-secondary) 100%);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 20px;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
+            opacity: 0;
+            transition: opacity 0.25s;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--accent-blue);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .metric-card:hover::before {
+            opacity: 1;
+        }
+
+        .metric-card .label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 500;
+        }
+
+        .metric-card .value {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1.2;
+        }
+
+        .metric-card .unit {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-left: 6px;
+        }
+
+        .metric-card .delta {
+            font-size: 12px;
+            margin-top: 8px;
+            color: var(--text-muted);
+        }
+
+        /* 百分位分布卡片 */
+        .percentile-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+
+        .percentile-card h3 {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .percentile-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 16px;
+        }
+
+        .percentile-item {
+            background: var(--bg-secondary);
+            border-radius: 10px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .percentile-item .p-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .percentile-item .p-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .percentile-item .p-bar {
+            height: 4px;
+            background: var(--bg-card);
+            border-radius: 2px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+
+        .percentile-item .p-bar .fill {
+            height: 100%;
+            border-radius: 2px;
+            background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
+        }
+
+        /* 图表区域 */
+        .charts-section {
+            margin-bottom: 24px;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        .chart-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 20px;
+        }
+
+        .chart-card.full-width {
+            grid-column: span 2;
+        }
+
+        .chart-card h3 {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .chart-card h3 svg {
+            color: var(--accent-blue);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 350px;
+        }
+
+        .chart-container.label-chart {
+            height: auto;
+            min-height: 350px;
+        }
+
+        .chart-hint {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 10px;
+            text-align: right;
+        }
+
+        /* 表格样式 */
+        .table-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            overflow: hidden;
+            margin-bottom: 24px;
+        }
+
+        .table-card h3 {
+            font-size: 15px;
+            font-weight: 600;
+            padding: 16px 20px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .table-wrapper {
+            max-height: 500px;
+            overflow-y: auto;
+            overflow-x: auto;
+        }
+
+        .table-wrapper::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        .table-wrapper::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+
+        .table-wrapper::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+
+        .table-wrapper::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 900px;
+        }
+
+        thead {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        th, td {
+            padding: 14px 20px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            background: var(--bg-secondary);
+            white-space: nowrap;
+        }
+
+        tbody tr {
+            transition: background 0.15s;
+        }
+
+        tbody tr:hover {
+            background: var(--bg-hover);
+        }
+
+        td {
+            font-size: 13px;
+        }
+
+        .label-name {
+            font-weight: 500;
+            color: var(--text-primary);
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .sortable {
+            cursor: pointer;
+            user-select: none;
+            transition: color 0.15s;
+        }
+
+        .sortable:hover {
+            color: var(--accent-blue);
+        }
+
+        .sort-icon {
+            display: inline-block;
+            margin-left: 6px;
+            opacity: 0.3;
+            transition: opacity 0.15s;
+        }
+
+        .sortable:hover .sort-icon {
+            opacity: 0.7;
+        }
+
+        .sortable.sorted-asc .sort-icon,
+        .sortable.sorted-desc .sort-icon {
+            opacity: 1;
+        }
+
+        .sortable.sorted-asc .sort-icon::after {
+            content: '↑';
+        }
+
+        .sortable.sorted-desc .sort-icon::after {
+            content: '↓';
+        }
+
+        /* 错误列表 */
+        .error-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .error-item {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.15s;
+        }
+
+        .error-item:hover {
+            background: var(--bg-hover);
+        }
+
+        .error-item:last-child {
+            border-bottom: none;
+        }
+
+        .error-item .message {
+            color: var(--text-secondary);
+            font-size: 13px;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            margin-right: 16px;
+        }
+
+        .error-item .count {
+            background: var(--accent-red);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        /* 空状态 */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+        }
+
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        footer {
+            text-align: center;
+            padding: 32px;
+            color: var(--text-muted);
+            font-size: 13px;
+            border-top: 1px solid var(--border-color);
+            margin-top: 40px;
+        }
+
+        /* 响应式 */
+        @media (max-width: 1200px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+            .chart-card.full-width {
+                grid-column: span 1;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .metrics-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .container {
+                padding: 16px;
+            }
+        }
+
+        /* Tooltip 自定义样式 */
+        .chartjs-tooltip {
+            background: var(--bg-card) !important;
+            border: 1px solid var(--border-color) !important;
+            border-radius: 8px !important;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4) !important;
+        }
+
+        /* 请求响应参数详情样式 */
+        .param-name {
+            color: var(--accent-cyan);
+            font-weight: 600;
+            font-size: 12px;
+        }
+
+        .param-value {
+            color: var(--text-secondary);
+            font-size: 12px;
+            word-break: break-all;
+        }
+
+        .param-item {
+            display: inline-block;
+            margin-right: 12px;
+            margin-bottom: 4px;
+            padding: 2px 6px;
+            background: var(--bg-secondary);
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .param-cell, .response-cell {
+            vertical-align: top;
+            padding: 12px !important;
+        }
+
+        .request-content, .response-content {
+            width: 100%;
+        }
+
+        .param-pre, .response-pre {
+            margin: 0;
+            padding: 10px;
+            background: var(--bg-secondary);
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 11px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            word-break: break-all;
+            max-height: none;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+        }
+
+        .param-pre {
+            max-height: 200px;
+        }
+
+        .response-pre {
+            max-height: 400px;
+        }
+
+        /* 可折叠内容样式 */
+        .expandable-content {
+            margin: 0;
+        }
+
+        .expand-summary {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: var(--bg-secondary);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            color: var(--accent-blue);
+            user-select: none;
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+        }
+
+        .expand-summary:hover {
+            background: var(--bg-hover);
+            border-color: var(--accent-blue);
+        }
+
+        .expandable-content[open] .expand-summary {
+            background: var(--bg-hover);
+            border-color: var(--accent-blue);
+            margin-bottom: 8px;
+        }
+
+        .summary-icon {
+            display: inline-block;
+            font-size: 10px;
+            transition: transform 0.2s ease;
+            color: var(--accent-blue);
+        }
+
+        .expandable-content[open] .summary-icon {
+            transform: rotate(90deg);
+        }
+
+        .summary-text {
+            font-weight: 500;
+        }
+
+        .expanded-content {
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-4px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .no-data {
+            color: var(--text-muted);
+            font-size: 12px;
+            font-style: italic;
+        }
+
+        details {
+            margin-top: 4px;
+        }
+
+        summary {
+            font-size: 12px;
+            color: var(--accent-blue);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        summary:hover {
+            color: var(--accent-cyan);
+        }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                </svg>
+                性能测试报告
+                <span class="status-badge {{status_class}}">
+                    {{status_text}}
+                </span>
+            </h1>
+            <div class="subtitle">
+                生成时间：{{generated_time}} &nbsp;|&nbsp; 源文件：{{file_name}}
+            </div>
+        </header>
+
+        <!-- 核心指标 -->
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="label">总请求数</div>
+                <div class="value">{{total_samples}}</div>
+                <div class="delta">Samples</div>
+            </div>
+            <div class="metric-card">
+                <div class="label">持续时间</div>
+                <div class="value">{{duration}}<span class="unit">秒</span></div>
+            </div>
+            <div class="metric-card">
+                <div class="label">平均响应时间</div>
+                <div class="value">{{avg_rt}}<span class="unit">ms</span></div>
+            </div>
+            <div class="metric-card">
+                <div class="label">吞吐量</div>
+                <div class="value">{{throughput}}<span class="unit">req/s</span></div>
+            </div>
+            <div class="metric-card">
+                <div class="label">错误率</div>
+                <div class="value" style="color: {{error_color}}">{{error_rate}}<span class="unit">%</span></div>
+            </div>
+            <div class="metric-card">
+                <div class="label">P95 响应时间</div>
+                <div class="value">{{p95_rt}}<span class="unit">ms</span></div>
+            </div>
+            <div class="metric-card">
+                <div class="label">平均 Latency</div>
+                <div class="value">{{avg_latency}}<span class="unit">ms</span></div>
+            </div>
+            <div class="metric-card">
+                <div class="label">平均连接时间</div>
+                <div class="value">{{avg_connect_time}}<span class="unit">ms</span></div>
+            </div>
+            <div class="metric-card">
+                <div class="label">平均空闲时间</div>
+                <div class="value">{{avg_idle_time}}<span class="unit">ms</span></div>
+            </div>
+            <div class="metric-card">
+                <div class="label">平均并发线程</div>
+                <div class="value">{{avg_concurrent_threads}}</div>
+            </div>
+            <div class="metric-card">
+                <div class="label">唯一 URL 数</div>
+                <div class="value">{{unique_urls}}</div>
+            </div>
+        </div>
+
+        <!-- 响应时间百分位分布 -->
+        <div class="percentile-card">
+            <h3>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="20" x2="18" y2="10"/>
+                    <line x1="12" y1="20" x2="12" y2="4"/>
+                    <line x1="6" y1="20" x2="6" y2="14"/>
+                </svg>
+                响应时间分布
+            </h3>
+            <div class="percentile-grid">
+                <div class="percentile-item">
+                    <div class="p-label">MIN</div>
+                    <div class="p-value">{{min_rt}}</div>
+                    <div class="p-bar"><div class="fill" style="width: {{min_pct}}%"></div></div>
+                </div>
+                <div class="percentile-item">
+                    <div class="p-label">P50</div>
+                    <div class="p-value">{{median_rt}}</div>
+                    <div class="p-bar"><div class="fill" style="width: {{median_pct}}%"></div></div>
+                </div>
+                <div class="percentile-item">
+                    <div class="p-label">P90</div>
+                    <div class="p-value">{{p90_rt}}</div>
+                    <div class="p-bar"><div class="fill" style="width: {{p90_pct}}%"></div></div>
+                </div>
+                <div class="percentile-item">
+                    <div class="p-label">P95</div>
+                    <div class="p-value">{{p95_rt}}</div>
+                    <div class="p-bar"><div class="fill" style="width: {{p95_pct}}%"></div></div>
+                </div>
+                <div class="percentile-item">
+                    <div class="p-label">P99</div>
+                    <div class="p-value">{{p99_rt}}</div>
+                    <div class="p-bar"><div class="fill" style="width: {{p99_pct}}%"></div></div>
+                </div>
+                <div class="percentile-item">
+                    <div class="p-label">MAX</div>
+                    <div class="p-value">{{max_rt}}</div>
+                    <div class="p-bar"><div class="fill" style="width: 100%"></div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 图表区域 -->
+        <div class="charts-section">
+            <div class="charts-grid">
+                <div class="chart-card full-width">
+                    <h3>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 3v18h18"/>
+                            <path d="M18 9l-5 5-4-4-3 3"/>
+                        </svg>
+                        响应时间趋势
+                    </h3>
+                    <div class="chart-container">
+                        <canvas id="rtChart"></canvas>
+                    </div>
+                    <div class="chart-hint">💡 支持鼠标滚轮缩放、拖拽平移</div>
+                </div>
+
+                <div class="chart-card">
+                    <h3>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="7" height="7"/>
+                            <rect x="14" y="3" width="7" height="7"/>
+                            <rect x="14" y="14" width="7" height="7"/>
+                            <rect x="3" y="14" width="7" height="7"/>
+                        </svg>
+                        吞吐量 (req/s)
+                    </h3>
+                    <div class="chart-container">
+                        <canvas id="throughputChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <h3>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="12" y1="8" x2="12" y2="12"/>
+                            <line x1="12" y1="16" x2="12.01" y2="16"/>
+                        </svg>
+                        错误数趋势
+                    </h3>
+                    <div class="chart-container">
+                        <canvas id="errorChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-card full-width">
+                    <h3>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="12" y1="20" x2="12" y2="10"/>
+                            <line x1="18" y1="20" x2="18" y2="4"/>
+                            <line x1="6" y1="20" x2="6" y2="16"/>
+                        </svg>
+                        各接口响应时间对比
+                    </h3>
+                    <div class="chart-container label-chart" style="height: {{label_chart_height}}px;">
+                        <canvas id="labelChart"></canvas>
+                    </div>
+                    <div class="chart-hint">💡 支持鼠标滚轮缩放、拖拽平移，可上下滚动查看所有接口</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 按接口统计表格 -->
+        <div class="table-card">
+            <h3>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 3h18v18H3z"/>
+                    <path d="M3 9h18"/>
+                    <path d="M3 15h18"/>
+                </svg>
+                按接口详细统计
+            </h3>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>接口名称</th>
+                            <th class="sortable" data-sort="count">请求数 <span class="sort-icon">↕</span></th>
+                            <th class="sortable" data-sort="success">成功 <span class="sort-icon">↕</span></th>
+                            <th class="sortable" data-sort="error">失败 <span class="sort-icon">↕</span></th>
+                            <th class="sortable" data-sort="errorRate">错误率 <span class="sort-icon">↕</span></th>
+                            <th class="sortable" data-sort="avgRt">平均 RT <span class="sort-icon">↕</span></th>
+                            <th class="sortable" data-sort="p95Rt">P95 RT <span class="sort-icon">↕</span></th>
+                            <th class="sortable" data-sort="p99Rt">P99 RT <span class="sort-icon">↕</span></th>
+                            <th class="sortable" data-sort="minMax">Min / Max <span class="sort-icon">↕</span></th>
+                            <th class="sortable" data-sort="latency">Latency <span class="sort-icon">↕</span></th>
+                            <th class="sortable" data-sort="connect">连接时间 <span class="sort-icon">↕</span></th>
+                            <th class="sortable" data-sort="idle">空闲时间 <span class="sort-icon">↕</span></th>
+                            <th class="sortable" data-sort="threads">并发线程 <span class="sort-icon">↕</span></th>
+                            <th class="sortable" data-sort="sampleCount">Sample Count <span class="sort-icon">↕</span></th>
+                            <th class="sortable" data-sort="errorCount">Error Count <span class="sort-icon">↕</span></th>
+                            <th>URL 数</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{label_rows}}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 错误信息 -->
+        {{error_section}}
+
+        <!-- HTTP 响应码分布 -->
+        {{response_code_section}}
+
+        <!-- URL 明细列表 -->
+        {{url_section}}
+
+        <!-- 请求参数与响应参数详情 -->
+        {{request_response_section}}
+    </div>
+
+    <footer>
+        <p>Generated by JMeter Report Generator | Grafana Style Performance Report</p>
+    </footer>
+
+    <script>
+        // Chart.js 全局配置
+        Chart.defaults.color = '#9ca3af';
+        Chart.defaults.borderColor = '#2a2f3a';
+        Chart.defaults.font.family = "'Segoe UI', system-ui, sans-serif";
+
+        // 通用选项
+        const commonOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    backgroundColor: '#1a1d21',
+                    titleColor: '#d1d5db',
+                    bodyColor: '#9ca3af',
+                    borderColor: '#2a2f3a',
+                    borderWidth: 1,
+                    padding: 14,
+                    displayColors: true,
+                    usePointStyle: true,
+                    titleFont: { size: 13, weight: '600' },
+                    bodyFont: { size: 12 },
+                    cornerRadius: 8,
+                    titleSpacing: 6,
+                    bodySpacing: 8
+                },
+                zoom: {
+                    pan: {
+                        enabled: true,
+                        mode: 'x',
+                    },
+                    zoom: {
+                        wheel: {
+                            enabled: true,
+                        },
+                        pinch: {
+                            enabled: true
+                        },
+                        mode: 'x',
+                    }
+                },
+                crosshair: {
+                    line: {
+                        color: '#3b82f6',
+                        width: 1
+                    },
+                    snap: {
+                        enabled: true
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: {
+                        color: '#2a2f3a',
+                        drawBorder: false,
+                    },
+                    ticks: {
+                        color: '#6b7280',
+                        maxRotation: 0,
+                        autoSkip: true
+                    }
+                },
+                y: {
+                    grid: {
+                        color: '#2a2f3a',
+                        drawBorder: false,
+                    },
+                    ticks: {
+                        color: '#6b7280'
+                    },
+                    beginAtZero: true
+                }
+            }
+        };
+
+        // 响应时间趋势图
+        const rtCtx = document.getElementById('rtChart').getContext('2d');
+        new Chart(rtCtx, {
+            type: 'line',
+            data: {
+                labels: {{time_labels}},
+                datasets: [{
+                    label: '平均响应时间 (ms)',
+                    data: {{rt_data}},
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 0,
+                    pointHoverRadius: 6,
+                    pointHoverBackgroundColor: '#3b82f6',
+                    pointHoverBorderColor: '#fff',
+                    pointHoverBorderWidth: 2,
+                    borderWidth: 2
+                }]
+            },
+            options: commonOptions
+        });
+
+        // 吞吐量图
+        const tpCtx = document.getElementById('throughputChart').getContext('2d');
+        new Chart(tpCtx, {
+            type: 'bar',
+            data: {
+                labels: {{time_labels}},
+                datasets: [{
+                    label: '吞吐量 (req/s)',
+                    data: {{throughput_data}},
+                    backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                    borderColor: '#10b981',
+                    borderWidth: 0,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                ...commonOptions,
+                plugins: {
+                    ...commonOptions.plugins,
+                    zoom: {
+                        pan: { enabled: true, mode: 'x' },
+                        zoom: { wheel: { enabled: true }, mode: 'x' }
+                    }
+                }
+            }
+        });
+
+        // 错误率图
+        const errCtx = document.getElementById('errorChart').getContext('2d');
+        new Chart(errCtx, {
+            type: 'line',
+            data: {
+                labels: {{time_labels}},
+                datasets: [{
+                    label: '错误数',
+                    data: {{error_data}},
+                    borderColor: '#ef4444',
+                    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 0,
+                    pointHoverRadius: 6,
+                    pointHoverBackgroundColor: '#ef4444',
+                    pointHoverBorderColor: '#fff',
+                    pointHoverBorderWidth: 2,
+                    borderWidth: 2
+                }]
+            },
+            options: commonOptions
+        });
+
+        // 接口对比图 - 动态计算图表高度
+        const labelData = {{label_rt_data}};
+        const labelCount = labelData.length;
+        const barHeight = 26; // 每个条形的高度
+        const labelSpacing = 12; // 每个标签的间距
+        const chartHeight = Math.max(350, labelCount * (barHeight + labelSpacing) + 40);
+
+        // 设置容器高度
+        const labelChartContainer = document.getElementById('labelChart').parentNode;
+        labelChartContainer.style.height = chartHeight + 'px';
+
+        const labelCtx = document.getElementById('labelChart').getContext('2d');
+        new Chart(labelCtx, {
+            type: 'bar',
+            data: {
+                labels: {{label_names}},
+                datasets: [{
+                    label: '平均响应时间 (ms)',
+                    data: labelData,
+                    backgroundColor: function(context) {
+                        const value = context.raw;
+                        const maxVal = Math.max(...labelData);
+                        const ratio = value / maxVal;
+                        if (ratio > 0.7) return 'rgba(239, 68, 68, 0.8)';
+                        if (ratio > 0.4) return 'rgba(245, 158, 11, 0.8)';
+                        return 'rgba(16, 185, 129, 0.8)';
+                    },
+                    borderColor: function(context) {
+                        const value = context.raw;
+                        const maxVal = Math.max(...labelData);
+                        const ratio = value / maxVal;
+                        if (ratio > 0.7) return '#ef4444';
+                        if (ratio > 0.4) return '#f59e0b';
+                        return '#10b981';
+                    },
+                    borderWidth: 0,
+                    borderRadius: 6,
+                    barPercentage: 0.7,
+                    categoryPercentage: 0.8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#1a1d21',
+                        titleColor: '#d1d5db',
+                        bodyColor: '#9ca3af',
+                        borderColor: '#2a2f3a',
+                        borderWidth: 1,
+                        padding: 14,
+                        cornerRadius: 8,
+                        titleFont: { size: 13, weight: '600' },
+                        bodyFont: { size: 12 }
+                    },
+                    zoom: {
+                        pan: {
+                            enabled: true,
+                            mode: 'y',
+                        },
+                        zoom: {
+                            wheel: {
+                                enabled: true,
+                            },
+                            pinch: {
+                                enabled: true
+                            },
+                            mode: 'y',
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { color: '#2a2f3a', drawBorder: false },
+                        ticks: { color: '#6b7280' }
+                    },
+                    y: {
+                        grid: { color: '#2a2f3a', drawBorder: false },
+                        ticks: {
+                            color: '#9ca3af',
+                            autoSkip: false,
+                            font: { size: 11 }
+                        },
+                        afterSetDimensions: function(axis) {
+                            axis.width = 150;
+                        }
+                    }
+                }
+            }
+        });
+
+        // 表格排序功能
+        const table = document.querySelector('.table-card table');
+        const tbody = table.querySelector('tbody');
+        const headers = table.querySelectorAll('.sortable');
+        let sortDirection = {};
+        let currentSort = null;
+
+        // 解析单元格数据
+        function parseCellData(cell, sortKey) {
+            const text = cell.textContent.trim();
+            if (sortKey === 'count' || sortKey === 'success' || sortKey === 'error' || sortKey === 'threads' || sortKey === 'sampleCount' || sortKey === 'errorCount') {
+                return parseInt(text.replace(/,/g, '')) || 0;
+            }
+            if (sortKey === 'errorRate') {
+                return parseFloat(text.replace('%', '')) || 0;
+            }
+            if (sortKey === 'avgRt' || sortKey === 'p95Rt' || sortKey === 'p99Rt' || sortKey === 'latency' || sortKey === 'connect' || sortKey === 'idle') {
+                return parseFloat(text.replace('ms', '')) || 0;
+            }
+            if (sortKey === 'minMax') {
+                // 按 Max 值排序
+                const match = text.match(/\/\s*(\d+)/);
+                return match ? parseInt(match[1]) : 0;
+            }
+            return text;
+        }
+
+        // 排序处理
+        function sortTable(sortKey) {
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+
+            // 切换排序方向
+            if (currentSort === sortKey) {
+                sortDirection[sortKey] = sortDirection[sortKey] === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortDirection[sortKey] = 'desc';
+                currentSort = sortKey;
+            }
+
+            const direction = sortDirection[sortKey];
+
+            // 更新表头样式
+            headers.forEach(th => {
+                th.classList.remove('sorted-asc', 'sorted-desc');
+                if (th.dataset.sort === sortKey) {
+                    th.classList.add(direction === 'asc' ? 'sorted-asc' : 'sorted-desc');
+                }
+            });
+
+            // 执行排序
+            rows.sort((a, b) => {
+                const cells = a.querySelectorAll('td');
+                const bCells = b.querySelectorAll('td');
+
+                // 找到对应列的索引
+                let cellIndex = 1;
+                if (sortKey === 'count') cellIndex = 1;
+                else if (sortKey === 'success') cellIndex = 2;
+                else if (sortKey === 'error') cellIndex = 3;
+                else if (sortKey === 'errorRate') cellIndex = 4;
+                else if (sortKey === 'avgRt') cellIndex = 5;
+                else if (sortKey === 'p95Rt') cellIndex = 6;
+                else if (sortKey === 'p99Rt') cellIndex = 7;
+                else if (sortKey === 'minMax') cellIndex = 8;
+                else if (sortKey === 'latency') cellIndex = 9;
+                else if (sortKey === 'connect') cellIndex = 10;
+                else if (sortKey === 'idle') cellIndex = 11;
+                else if (sortKey === 'threads') cellIndex = 12;
+                else if (sortKey === 'sampleCount') cellIndex = 13;
+                else if (sortKey === 'errorCount') cellIndex = 14;
+
+                const aValue = parseCellData(cells[cellIndex], sortKey);
+                const bValue = parseCellData(bCells[cellIndex], sortKey);
+
+                if (direction === 'asc') {
+                    return aValue > bValue ? 1 : aValue < bValue ? -1 : 0;
+                } else {
+                    return aValue < bValue ? 1 : aValue > bValue ? -1 : 0;
+                }
+            });
+
+            // 重新插入排序后的行
+            rows.forEach(row => tbody.appendChild(row));
+        }
+
+        // 绑定点击事件
+        headers.forEach(th => {
+            th.addEventListener('click', () => sortTable(th.dataset.sort));
+        });
+    </script>
+</body>
+</html>

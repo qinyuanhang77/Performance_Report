@@ -1,0 +1,4 @@
+Microsoft Windows [版本 10.0.19044.2006]
+(c) Microsoft Corporation。保留所有权利。
+
+D:\ai-space\report>
