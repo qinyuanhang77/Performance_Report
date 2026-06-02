@@ -9,6 +9,7 @@ JMeter 报告批量生成器
 """
 import shutil
 import sys
+import traceback
 from pathlib import Path
 
 from report_generator import generate_report
@@ -99,6 +100,7 @@ def main():
 
         except Exception as e:
             print(f"  错误：{e}")
+            traceback.print_exc()
             error_count += 1
 
     # 生成索引页面

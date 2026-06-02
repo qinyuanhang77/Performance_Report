@@ -74,7 +74,8 @@ def generate_report(data, output_path: str, source_file: str = ""):
         # 降采样：如果数据点超过 200 个，则进行聚合
         max_points = 200
         if len(raw_data) > max_points:
-            step = len(raw_data) // max_points
+            import math
+            step = math.ceil(len(raw_data) / max_points)
             sampled_data = []
             for i in range(0, len(raw_data), step):
                 chunk = raw_data[i:i+step]
@@ -87,7 +88,7 @@ def generate_report(data, output_path: str, source_file: str = ""):
                     sampled_point.avg_rt = avg_rt
                     sampled_point.count = total_count
                     sampled_point.error_count = total_errors
-                    sampled_point.throughput = total_count / (step if step > 0 else 1)
+                    sampled_point.throughput = total_count / len(chunk)
                     sampled_data.append(sampled_point)
             raw_data = sampled_data
 

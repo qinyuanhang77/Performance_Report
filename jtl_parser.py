@@ -32,6 +32,7 @@ class Sample:
     sample_count: int = 0  # 样本数
     error_count: int = 0  # 错误数
     all_threads: int = 0  # 总线程数/并发用户数
+    grp_threads: int = 0  # 线程组中的线程数
 
 
 @dataclass
@@ -66,7 +67,7 @@ def parse_csv(file_path: Path) -> JTLData:
     """解析 CSV 格式 JTL 文件"""
     data = JTLData(format="CSV")
 
-    with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+    with open(file_path, 'r', encoding='utf-8-sig', errors='ignore') as f:
         # 尝试多种可能的列名
         reader = csv.DictReader(f)
         headers = reader.fieldnames or []
@@ -77,7 +78,7 @@ def parse_csv(file_path: Path) -> JTLData:
             hl = h.lower().strip()
             if hl in ['timestamp', 'timeStamp', 'timestamp']:
                 col_map['timestamp'] = h
-            elif hl in ['elapsed', 'elapsedtime', 'time']:
+            elif hl in ['elapsed', 'elapsedtime', 'elapsed_ms', 'responsetime', 'rt']:
                 col_map['elapsed'] = h
             elif hl in ['label', 'name', 'request']:
                 col_map['label'] = h
@@ -85,7 +86,7 @@ def parse_csv(file_path: Path) -> JTLData:
                 col_map['response_code'] = h
             elif hl in ['responsemessage', 'message']:
                 col_map['response_message'] = h
-            elif hl in ['success', 'isSuccess']:
+            elif hl in ['success', 'issuccess', 's']:
                 col_map['success'] = h
             elif hl in ['failuremessage', 'message']:
                 col_map['failure_message'] = h
@@ -97,11 +98,11 @@ def parse_csv(file_path: Path) -> JTLData:
                 col_map['bytes'] = h
             elif hl in ['sentbytes', 'sent']:
                 col_map['sent_bytes'] = h
-            elif hl in ['latency', 'latencytime']:
+            elif hl in ['latency', 'latencytime', 'lt']:
                 col_map['latency'] = h
-            elif hl in ['connect', 'connecttime']:
+            elif hl in ['connect', 'connecttime', 'ct']:
                 col_map['connect_time'] = h
-            elif hl in ['idletime', 'idle']:
+            elif hl in ['idletime', 'idle', 'it']:
                 col_map['idle_time'] = h
             elif hl in ['url', 'requesturl']:
                 col_map['url'] = h
@@ -142,6 +143,7 @@ def parse_csv(file_path: Path) -> JTLData:
                     sample_count=int(row.get(col_map.get('sample_count', 'sampleCount'), 0) or 0),
                     error_count=int(row.get(col_map.get('error_count', 'errorCount'), 0) or 0),
                     all_threads=int(row.get(col_map.get('all_threads', 'allThreads'), 0) or 0),
+                    grp_threads=int(row.get(col_map.get('grp_threads', 'grpThreads'), 0) or 0),
                 )
                 # CSV: 如果 queryString 为空，从 URL 中提取
                 if not sample.query_string and '?' in sample.url:
@@ -169,8 +171,8 @@ def parse_xml(file_path: Path) -> JTLData:
     for elem in root.iter():
         if elem.tag == 'httpSample' or elem.tag == 'sample':
             try:
-                ts = int(elem.get('t', 0) or elem.get('timestamp', 0))
-                elapsed = int(elem.get('lt', 0) or elem.get('elapsed', 0))
+                ts = int(elem.get('ts', elem.get('timestamp', '0')) or '0')
+                elapsed = int(elem.get('t', elem.get('elapsed', '0')) or '0')
 
                 # 获取 responseData 子元素文本
                 response_data_elem = elem.find('responseData')
@@ -206,17 +208,18 @@ def parse_xml(file_path: Path) -> JTLData:
                     failure_message=elem.findtext('failureMessage', '') or '',
                     thread_name=elem.get('tn', elem.get('threadName', '')),
                     data_type=elem.get('dt', elem.get('dataType', '')),
-                    bytes=int(elem.get('b', 0) or 0),
-                    sent_bytes=int(elem.get('sb', 0) or 0),
-                    latency=int(elem.get('lt', 0) or 0),
-                    connect_time=int(elem.get('ct', 0) or 0),
-                    idle_time=int(elem.get('it', 0) or 0),
+                    bytes=int(elem.get('b', '0') or '0'),
+                    sent_bytes=int(elem.get('sb', '0') or '0'),
+                    latency=int(elem.get('lt', '0') or '0'),
+                    connect_time=int(elem.get('ct', '0') or '0'),
+                    idle_time=int(elem.get('it', '0') or '0'),
                     url=url,
                     query_string=query_string,
                     response_data=response_data[:50000] if response_data else '',  # 保留最多 50KB 响应数据
-                    sample_count=int(elem.get('sc', 0) or 0),
-                    error_count=int(elem.get('ec', 0) or 0),
-                    all_threads=int(elem.get('na', 0) or 0),
+                    sample_count=int(elem.get('sc', '0') or '0'),
+                    error_count=int(elem.get('ec', '0') or '0'),
+                    all_threads=int(elem.get('na', '0') or '0'),
+                    grp_threads=int(elem.get('ng', '0') or '0'),
                 )
                 data.samples.append(sample)
 
