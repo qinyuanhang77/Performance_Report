@@ -109,10 +109,10 @@ def generate_report(data, output_path: str, source_file: str = ""):
     label_connect_data = []
     label_idle_data = []
     label_thread_data = []
+    slow_diagnostic_items = []
 
-    # 收集所有 URL 和响应码用于新模块
+    # 收集所有 URL 用于明细模块
     all_urls_data = []
-    all_response_codes_data = []
     all_query_params_data = []  # 请求参数明细
 
     for label, stats in sorted(metrics.label_stats.items(), key=lambda x: x[1].count, reverse=True):
@@ -131,14 +131,8 @@ def generate_report(data, output_path: str, source_file: str = ""):
         # 截断过长的标签名
         display_label = label[:50] + "..." if len(label) > 50 else label
 
-        # 生成响应码分布 HTML
-        response_codes_html = ''
-        if stats.response_messages:
-            codes = ', '.join([f"{k}: {v}" for k, v in list(stats.response_messages.items())[:5]])
-            response_codes_html = f'<span title="{safe_str(codes)}">{codes}</span>'
-
         label_rows.append(f"""
-            <tr>
+            <tr data-interface-name="{safe_str(label)}">
                 <td class="label-name" title="{safe_str(label)}">{safe_str(display_label)}</td>
                 <td>{stats.count:,}</td>
                 <td style="color: #10b981;">{stats.success_count:,}</td>
@@ -165,10 +159,21 @@ def generate_report(data, output_path: str, source_file: str = ""):
             </tr>
         """)
 
+        slow_diagnostic_items.append({
+            'label': label,
+            'display_label': display_label,
+            'count': stats.count,
+            'avg': label_avg,
+            'p95': label_p95,
+            'p99': label_p99,
+            'max': stats.max_rt,
+        })
+
         # 收集 URL 数据
         for url in list(stats.url_set)[:20]:  # 每个接口最多取 20 个 URL
             all_urls_data.append({
                 'label': display_label,
+                'full_label': label,
                 'url': url,
                 'count': stats.count,
             })
@@ -188,14 +193,6 @@ def generate_report(data, output_path: str, source_file: str = ""):
             except Exception:
                 pass
 
-        # 收集响应码数据
-        for code, count in stats.response_messages.items():
-            all_response_codes_data.append({
-                'label': display_label,
-                'code': code,
-                'count': count,
-            })
-
         label_names.append(display_label)
         label_rt_data.append(round(label_avg, 2))
         label_p95_data.append(round(label_p95, 2))
@@ -204,6 +201,96 @@ def generate_report(data, output_path: str, source_file: str = ""):
         label_connect_data.append(round(label_connect_avg, 2))
         label_idle_data.append(round(label_idle_avg, 2))
         label_thread_data.append(avg_threads)
+
+    # 慢接口诊断部分
+    slow_diagnostics_section = ""
+    if slow_diagnostic_items:
+        top_n = 10
+
+        def metric_value_html(value):
+            return f"{value:,.2f} ms"
+
+        def build_metric_rows(metric_key, metric_label):
+            top_items = sorted(slow_diagnostic_items, key=lambda x: x[metric_key], reverse=True)[:top_n]
+            return "".join([
+                f"""
+                <button class="slow-diagnostic-row" type="button" data-focus-interface="{safe_str(item['label'])}" title="{safe_str(item['label'])}">
+                    <span class="slow-rank">#{index}</span>
+                    <span class="slow-name">{safe_str(item['display_label'])}</span>
+                    <span class="slow-value">{metric_value_html(item[metric_key])}</span>
+                </button>
+                """
+                for index, item in enumerate(top_items, start=1)
+            ])
+
+        metric_configs = [
+            ('avg', '平均 RT'),
+            ('p95', 'P95 RT'),
+            ('p99', 'P99 RT'),
+            ('max', 'Max RT'),
+        ]
+
+        rank_scores = {}
+        for metric_key, _ in metric_configs:
+            top_items = sorted(slow_diagnostic_items, key=lambda x: x[metric_key], reverse=True)[:top_n]
+            for index, item in enumerate(top_items):
+                entry = rank_scores.setdefault(item['label'], {
+                    'label': item['label'],
+                    'display_label': item['display_label'],
+                    'score': 0,
+                    'p95': item['p95'],
+                    'p99': item['p99'],
+                    'max': item['max'],
+                })
+                entry['score'] += top_n - index
+
+        priority_items = sorted(
+            rank_scores.values(),
+            key=lambda x: (x['score'], x['p95'], x['p99'], x['max']),
+            reverse=True
+        )[:3]
+
+        priority_html = "".join([
+            f"""
+            <button class="slow-priority-item" type="button" data-focus-interface="{safe_str(item['label'])}" title="{safe_str(item['label'])}">
+                {safe_str(item['display_label'])}
+            </button>
+            """
+            for item in priority_items
+        ])
+
+        metric_panels = "".join([
+            f"""
+            <div class="slow-diagnostic-panel">
+                <div class="slow-diagnostic-title">{safe_str(metric_label)} Top {top_n}</div>
+                <div class="slow-diagnostic-list">
+                    {build_metric_rows(metric_key, metric_label)}
+                </div>
+            </div>
+            """
+            for metric_key, metric_label in metric_configs
+        ])
+
+        slow_diagnostics_section = f"""
+        <div class="table-card slow-diagnostics-card">
+            <h3>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 3v18h18"/>
+                    <path d="M7 15l4-4 3 3 5-7"/>
+                </svg>
+                慢接口 Top {top_n} 诊断
+            </h3>
+            <div class="slow-priority-bar">
+                <span class="slow-priority-label">优先关注</span>
+                <div class="slow-priority-list">
+                    {priority_html}
+                </div>
+            </div>
+            <div class="slow-diagnostics-grid">
+                {metric_panels}
+            </div>
+        </div>
+        """
 
     # 错误信息部分
     error_section = ""
@@ -238,66 +325,13 @@ def generate_report(data, output_path: str, source_file: str = ""):
         </div>
         """
 
-    # HTTP 响应码分布部分
-    response_code_section = ""
-    if all_response_codes_data:
-        # 按响应码分组汇总
-        code_summary = {}
-        for item in all_response_codes_data:
-            code = item['code']
-            if code not in code_summary:
-                code_summary[code] = {'count': 0, 'labels': set()}
-            code_summary[code]['count'] += item['count']
-            code_summary[code]['labels'].add(item['label'])
-
-        response_code_rows = []
-        for code, data in sorted(code_summary.items(), key=lambda x: x[1]['count'], reverse=True):
-            status_color = '#10b981' if code.startswith('2') else ('#f59e0b' if code.startswith('3') else ('#f97316' if code.startswith('4') else '#ef4444'))
-            response_code_rows.append(f"""
-                <tr>
-                    <td><span style="font-weight: 600; color: {status_color}; font-size: 14px;">{code}</span></td>
-                    <td>{data['count']:,}</td>
-                    <td>{len(data['labels'])}</td>
-                    <td style="color: var(--text-secondary);">
-                        {', '.join(list(data['labels'])[:3])}{'...' if len(data['labels']) > 3 else ''}
-                    </td>
-                </tr>
-            """)
-
-        response_code_section = f"""
-        <div class="table-card">
-            <h3>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
-                    <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
-                </svg>
-                HTTP 响应码分布
-            </h3>
-            <div class="table-wrapper">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>响应码</th>
-                            <th>请求数</th>
-                            <th>涉及接口数</th>
-                            <th>接口示例</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {''.join(response_code_rows[:30])}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        """
-
     # URL 明细部分
     url_section = ""
     if all_urls_data:
         url_rows = []
-        for item in all_urls_data[:100]:  # 最多显示 100 条
+        for item in all_urls_data[:1000]:  # 最多显示 1000 条
             url_rows.append(f"""
-                <tr>
+                <tr data-detail-interface-name="{safe_str(item['full_label'])}">
                     <td class="label-name" title="{safe_str(item['label'])}">{safe_str(item['label'])}</td>
                     <td style="color: var(--text-secondary); word-break: break-all;">{safe_str(item['url'])}</td>
                     <td>{item['count']:,}</td>
@@ -310,7 +344,7 @@ def generate_report(data, output_path: str, source_file: str = ""):
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
                 </svg>
-                URL 明细列表 (Top 100)
+                URL 明细列表 (Top 1000)
             </h3>
             <div class="table-wrapper">
                 <table>
@@ -429,7 +463,7 @@ def generate_report(data, output_path: str, source_file: str = ""):
                     response_html = '<span class="no-data">无响应数据</span>'
 
                 request_response_rows.append(f"""
-                    <tr>
+                    <tr data-detail-interface-name="{safe_str(label)}">
                         <td class="label-name" title="{safe_str(label)}">{safe_str(label[:60])}</td>
                         <td class="param-cell">
                             {request_html}
@@ -512,9 +546,9 @@ def generate_report(data, output_path: str, source_file: str = ""):
         "{{error_data}}": json.dumps(error_data) if error_data else '[]',
         "{{label_names}}": json.dumps(label_names) if label_names else '[]',
         "{{label_rt_data}}": json.dumps(label_rt_data) if label_rt_data else '[]',
-        "{{label_rows}}": "".join(label_rows) if label_rows else '<tr><td colspan="14" class="empty-state">无数据</td></tr>',
+        "{{label_rows}}": "".join(label_rows) if label_rows else '<tr><td colspan="16" class="empty-state">无数据</td></tr>',
+        "{{slow_diagnostics_section}}": slow_diagnostics_section,
         "{{error_section}}": error_section,
-        "{{response_code_section}}": response_code_section,
         "{{url_section}}": url_section,
         "{{request_response_section}}": request_response_section,
         "{{label_chart_height}}": str(label_chart_height),

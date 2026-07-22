@@ -44,6 +44,11 @@ class JTLData:
     end_time: int = 0
 
 
+def is_transaction_controller_result(response_message: str) -> bool:
+    """判断是否为 JMeter 事务控制器生成的汇总样本"""
+    return "number of samples in transaction" in (response_message or "").lower()
+
+
 def detect_format(file_path: Path) -> str:
     """自动检测 JTL 文件格式"""
     with open(file_path, 'rb') as f:
@@ -145,6 +150,8 @@ def parse_csv(file_path: Path) -> JTLData:
                     all_threads=int(row.get(col_map.get('all_threads', 'allThreads'), 0) or 0),
                     grp_threads=int(row.get(col_map.get('grp_threads', 'grpThreads'), 0) or 0),
                 )
+                if is_transaction_controller_result(sample.response_message):
+                    continue
                 # CSV: 如果 queryString 为空，从 URL 中提取
                 if not sample.query_string and '?' in sample.url:
                     sample.query_string = sample.url.split('?', 1)[1]
@@ -221,6 +228,8 @@ def parse_xml(file_path: Path) -> JTLData:
                     all_threads=int(elem.get('na', '0') or '0'),
                     grp_threads=int(elem.get('ng', '0') or '0'),
                 )
+                if elem.tag == 'sample' and is_transaction_controller_result(sample.response_message):
+                    continue
                 data.samples.append(sample)
 
                 if data.start_time == 0 or ts < data.start_time:

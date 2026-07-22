@@ -279,6 +279,109 @@
             text-align: right;
         }
 
+        .slow-priority-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border-color);
+            flex-wrap: wrap;
+        }
+
+        .slow-priority-label {
+            color: var(--text-secondary);
+            font-size: 12px;
+            white-space: nowrap;
+        }
+
+        .slow-priority-list {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            min-width: 0;
+        }
+
+        .slow-priority-item,
+        .slow-diagnostic-row {
+            border: 1px solid var(--border-color);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            cursor: pointer;
+            text-align: left;
+            font-family: inherit;
+        }
+
+        .slow-priority-item {
+            max-width: 340px;
+            padding: 7px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .slow-priority-item:hover,
+        .slow-diagnostic-row:hover {
+            border-color: var(--accent-blue);
+            background: var(--bg-hover);
+        }
+
+        .slow-diagnostics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        }
+
+        .slow-diagnostic-panel {
+            min-width: 0;
+            padding: 16px;
+            border-right: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .slow-diagnostic-title {
+            margin-bottom: 10px;
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+
+        .slow-diagnostic-list {
+            display: grid;
+            gap: 8px;
+        }
+
+        .slow-diagnostic-row {
+            width: 100%;
+            display: grid;
+            grid-template-columns: 36px minmax(0, 1fr) auto;
+            gap: 8px;
+            align-items: center;
+            padding: 9px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+        }
+
+        .slow-rank {
+            color: var(--text-muted);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .slow-name {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .slow-value {
+            color: var(--accent-yellow);
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+        }
+
         /* 表格样式 */
         .table-card {
             background: var(--bg-card);
@@ -297,6 +400,138 @@
             display: flex;
             align-items: center;
             gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .table-card h3 .section-hint {
+            color: var(--text-muted);
+            font-size: 12px;
+            font-weight: 400;
+            margin-left: 4px;
+            text-transform: none;
+            letter-spacing: 0;
+        }
+
+        .interface-filter-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            padding: 14px 20px;
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border-color);
+            flex-wrap: wrap;
+        }
+
+        .interface-filter-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1 1 320px;
+            max-width: 560px;
+            min-width: 240px;
+            padding: 0 10px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+
+        .interface-filter-control svg {
+            width: 16px;
+            height: 16px;
+            color: var(--text-muted);
+            flex: 0 0 auto;
+        }
+
+        .interface-filter-input {
+            width: 100%;
+            min-width: 0;
+            padding: 10px 0;
+            border: 0;
+            outline: none;
+            background: transparent;
+            color: var(--text-primary);
+            font-size: 13px;
+        }
+
+        .interface-filter-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .interface-filter-clear {
+            padding: 6px 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            font-size: 12px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .interface-filter-clear:hover:not(:disabled) {
+            color: var(--text-primary);
+            border-color: var(--accent-blue);
+        }
+
+        .interface-filter-clear:disabled {
+            opacity: 0.45;
+            cursor: default;
+        }
+
+        .interface-filter-count {
+            color: var(--text-secondary);
+            font-size: 12px;
+            white-space: nowrap;
+        }
+
+        #interfaceStatsTable tbody tr[data-interface-name] {
+            cursor: pointer;
+        }
+
+        #interfaceStatsTable tbody tr.interface-row-selected {
+            background: rgba(59, 130, 246, 0.14);
+        }
+
+        .detail-link-filter-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 20px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        .detail-link-filter-bar[hidden] {
+            display: none;
+        }
+
+        .detail-link-filter-name {
+            color: var(--text-primary);
+            font-weight: 600;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .detail-link-filter-clear {
+            margin-left: auto;
+            padding: 6px 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            font-size: 12px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .detail-link-filter-clear:hover {
+            color: var(--text-primary);
+            border-color: var(--accent-blue);
         }
 
         .table-wrapper {
@@ -750,6 +985,9 @@
             </div>
         </div>
 
+        <!-- 慢接口诊断 -->
+        {{slow_diagnostics_section}}
+
         <!-- 图表区域 -->
         <div class="charts-section">
             <div class="charts-grid">
@@ -822,9 +1060,26 @@
                     <path d="M3 15h18"/>
                 </svg>
                 按接口详细统计
+                <span class="section-hint">点击接口行可单独查看该接口详情</span>
             </h3>
+            <div class="interface-filter-bar">
+                <div class="interface-filter-control">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="11" cy="11" r="8"/>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                    <input id="interfaceFilterInput" class="interface-filter-input" type="search" placeholder="筛选接口名称" autocomplete="off" aria-label="筛选接口名称">
+                    <button id="interfaceFilterClear" class="interface-filter-clear" type="button" disabled>清空</button>
+                </div>
+                <div id="interfaceFilterCount" class="interface-filter-count">显示 0 / 0 条</div>
+            </div>
+            <div id="detailLinkFilterBar" class="detail-link-filter-bar" hidden>
+                <span>详情筛选</span>
+                <span id="detailLinkFilterName" class="detail-link-filter-name"></span>
+                <button id="detailLinkFilterClear" class="detail-link-filter-clear" type="button">清除</button>
+            </div>
             <div class="table-wrapper">
-                <table>
+                <table id="interfaceStatsTable">
                     <thead>
                         <tr>
                             <th>接口名称</th>
@@ -854,9 +1109,6 @@
 
         <!-- 错误信息 -->
         {{error_section}}
-
-        <!-- HTTP 响应码分布 -->
-        {{response_code_section}}
 
         <!-- URL 明细列表 -->
         {{url_section}}
@@ -1121,12 +1373,74 @@
             }
         });
 
-        // 表格排序功能
-        const table = document.querySelector('.table-card table');
-        const tbody = table.querySelector('tbody');
-        const headers = table.querySelectorAll('.sortable');
+        // 表格筛选与排序功能
+        const table = document.getElementById('interfaceStatsTable');
+        const tbody = table ? table.querySelector('tbody') : null;
+        const headers = table ? table.querySelectorAll('.sortable') : [];
+        const interfaceFilterInput = document.getElementById('interfaceFilterInput');
+        const interfaceFilterClear = document.getElementById('interfaceFilterClear');
+        const interfaceFilterCount = document.getElementById('interfaceFilterCount');
+        const detailLinkFilterBar = document.getElementById('detailLinkFilterBar');
+        const detailLinkFilterName = document.getElementById('detailLinkFilterName');
+        const detailLinkFilterClear = document.getElementById('detailLinkFilterClear');
         let sortDirection = {};
         let currentSort = null;
+        let selectedDetailInterfaceName = '';
+
+        function getInterfaceRows() {
+            return tbody ? Array.from(tbody.querySelectorAll('tr[data-interface-name]')) : [];
+        }
+
+        function getDetailRows() {
+            return Array.from(document.querySelectorAll('tr[data-detail-interface-name]'));
+        }
+
+        function applyInterfaceFilter() {
+            const filterText = interfaceFilterInput ? interfaceFilterInput.value.trim().toLowerCase() : '';
+            const rows = getInterfaceRows();
+            let visibleCount = 0;
+
+            rows.forEach(row => {
+                const interfaceName = (row.dataset.interfaceName || '').toLowerCase();
+                const isVisible = !filterText || interfaceName.includes(filterText);
+                row.style.display = isVisible ? '' : 'none';
+                if (isVisible) {
+                    visibleCount += 1;
+                }
+            });
+
+            if (interfaceFilterCount) {
+                interfaceFilterCount.textContent = `显示 ${visibleCount} / ${rows.length} 条`;
+            }
+            if (interfaceFilterClear) {
+                interfaceFilterClear.disabled = !filterText;
+            }
+        }
+
+        function applyDetailFilter() {
+            const detailRows = getDetailRows();
+            detailRows.forEach(row => {
+                const interfaceName = row.dataset.detailInterfaceName || '';
+                row.style.display = !selectedDetailInterfaceName || interfaceName === selectedDetailInterfaceName ? '' : 'none';
+            });
+
+            getInterfaceRows().forEach(row => {
+                row.classList.toggle('interface-row-selected', (row.dataset.interfaceName || '') === selectedDetailInterfaceName);
+            });
+
+            if (detailLinkFilterBar) {
+                detailLinkFilterBar.hidden = !selectedDetailInterfaceName;
+            }
+            if (detailLinkFilterName) {
+                detailLinkFilterName.textContent = selectedDetailInterfaceName;
+                detailLinkFilterName.title = selectedDetailInterfaceName;
+            }
+        }
+
+        function setDetailInterface(interfaceName) {
+            selectedDetailInterfaceName = interfaceName || '';
+            applyDetailFilter();
+        }
 
         // 解析单元格数据
         function parseCellData(cell, sortKey) {
@@ -1150,7 +1464,7 @@
 
         // 排序处理
         function sortTable(sortKey) {
-            const rows = Array.from(tbody.querySelectorAll('tr'));
+            const rows = getInterfaceRows();
 
             // 切换排序方向
             if (currentSort === sortKey) {
@@ -1204,12 +1518,42 @@
 
             // 重新插入排序后的行
             rows.forEach(row => tbody.appendChild(row));
+            applyInterfaceFilter();
+            applyDetailFilter();
+        }
+
+        if (interfaceFilterInput) {
+            interfaceFilterInput.addEventListener('input', applyInterfaceFilter);
+        }
+
+        if (interfaceFilterClear) {
+            interfaceFilterClear.addEventListener('click', () => {
+                if (interfaceFilterInput) {
+                    interfaceFilterInput.value = '';
+                    interfaceFilterInput.focus();
+                }
+                applyInterfaceFilter();
+            });
+        }
+
+        getInterfaceRows().forEach(row => {
+            row.addEventListener('click', () => setDetailInterface(row.dataset.interfaceName || ''));
+        });
+
+        document.querySelectorAll('[data-focus-interface]').forEach(item => {
+            item.addEventListener('click', () => setDetailInterface(item.dataset.focusInterface || ''));
+        });
+
+        if (detailLinkFilterClear) {
+            detailLinkFilterClear.addEventListener('click', () => setDetailInterface(''));
         }
 
         // 绑定点击事件
         headers.forEach(th => {
             th.addEventListener('click', () => sortTable(th.dataset.sort));
         });
+        applyInterfaceFilter();
+        applyDetailFilter();
     </script>
 </body>
 </html>
